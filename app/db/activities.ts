@@ -1,9 +1,23 @@
 import { getDb } from "./index";
 
+export type Kind = "Productive" | "Casual" | "Other";
+
+export type Area =
+  | "Startup"
+  | "Job"
+  | "Health"
+  | "Learning"
+  | "Rest"
+  | "Personal"
+  | "Admin";
+
 export type Activity = {
   id: string;
   title: string;
+  // keep category for backward compatibility (can delete later)
   category: string;
+  kind: Kind;
+  area: Area;
   start_ts: number;
   end_ts: number;
   notes: string | null;
@@ -15,12 +29,14 @@ export async function insertActivity(activity: Activity): Promise<void> {
 
   await db.runAsync(
     `INSERT INTO activities 
-     (id, title, category, start_ts, end_ts, notes, created_ts)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+     (id, title, category, kind, area, start_ts, end_ts, notes, created_ts)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       activity.id,
       activity.title,
       activity.category,
+      activity.kind,
+      activity.area,
       activity.start_ts,
       activity.end_ts,
       activity.notes,
