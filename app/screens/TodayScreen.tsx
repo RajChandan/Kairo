@@ -2,6 +2,9 @@ import { useCallback, useState } from "react";
 import { Alert, Pressable, Text, View, ScrollView } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { getSettings } from "../db/settings";
+import { dayRangeForNow } from "../lib/time";
+
 import type { RootStackParamList } from "../types/navigation";
 
 import {
@@ -22,9 +25,11 @@ export default function TodayScreen({ navigation }: Props) {
   const [items, setItems] = useState<Activity[]>([]);
 
   const load = useCallback(() => {
-    const start = startOfTodayMs();
-    const end = startOfTomorrowMs();
-    listActivitiesBetween(start, end)
+    getSettings()
+      .then((s) => {
+        const { startMs, endMs } = dayRangeForNow(s.day_start_minutes);
+        return listActivitiesBetween(startMs, endMs);
+      })
       .then(setItems)
       .catch((e) => Alert.alert("Load failed", String(e)));
   }, []);
@@ -45,6 +50,18 @@ export default function TodayScreen({ navigation }: Props) {
       <Text style={{ fontSize: 28, fontWeight: "700" }}>Today</Text>
 
       <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
+        <Pressable
+          onPress={() => navigation.navigate("Settings")}
+          style={{
+            paddingVertical: 12,
+            paddingHorizontal: 14,
+            borderRadius: 12,
+            backgroundColor: "#eee",
+          }}
+        >
+          <Text style={{ fontWeight: "700" }}>Settings</Text>
+        </Pressable>
+
         <Pressable
           onPress={() => navigation.navigate("AddActivity")}
           style={{

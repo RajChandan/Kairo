@@ -4,4 +4,5 @@ export type RootStackParamList = {
   Week: undefined;
   Habits: undefined;
   Review: undefined;
+  Settings: undefined;
 };
