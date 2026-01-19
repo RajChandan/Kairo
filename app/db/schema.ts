@@ -1,4 +1,4 @@
-export const DB_NAME = "kairo.db";
+export const DB_NAME = "kairo_dev.db";
 
 // We'll manage migrations with PRAGMA user_version
 export const LATEST_DB_VERSION = 2;
