@@ -6,6 +6,9 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import TodayScreen from "./app/screens/TodayScreen";
 import AddActivityScreen from "./app/screens/AddActivityScreen";
 import SettingsScreen from "./app/screens/SettingsScreen";
+import WeekScreen from "./app/screens/WeekScreen";
+import HabitsScreen from "./app/screens/HabitsScreen";
+import ReviewScreen from "./app/screens/ReviewScreen";
 
 import type { RootStackParamList } from "./app/types/navigation";
 import { initDb } from "./app/db";
@@ -49,6 +52,9 @@ export default function App() {
           options={{ title: "Log" }}
         />
         <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="Week" component={WeekScreen} />
+        <Stack.Screen name="Habits" component={HabitsScreen} />
+        <Stack.Screen name="Review" component={ReviewScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
