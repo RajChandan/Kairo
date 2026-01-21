@@ -7,6 +7,8 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
+const CHUNK_OPTIONS = [15, 30, 45, 60] as const;
+
 export default function SettingsScreen() {
   const [dayStart, setDayStart] = useState(390); // minutes
   const [chunk, setChunk] = useState(30);
@@ -39,27 +41,36 @@ export default function SettingsScreen() {
       <Text style={{ fontSize: 28, fontWeight: "700" }}>Settings</Text>
 
       <View style={{ gap: 6 }}>
-        <Text style={{ fontWeight: "700" }}>Day starts at</Text>
-        <Text style={{ opacity: 0.75 }}>
-          Current: {String(hh).padStart(2, "0")}:{String(mm).padStart(2, "0")}
-        </Text>
+        <Text style={{ fontWeight: "700" }}>Default chunk length</Text>
 
-        <Text style={{ opacity: 0.7, marginTop: 6 }}>
-          Enter minutes from midnight (0–1439). Example: 6:30 AM = 390
-        </Text>
-
-        <TextInput
-          keyboardType="number-pad"
-          value={String(dayStart)}
-          onChangeText={(v) => setDayStart(Number(v || 0))}
-          style={{
-            borderWidth: 1,
-            borderColor: "#ddd",
-            borderRadius: 12,
-            padding: 12,
-            fontSize: 16,
-          }}
-        />
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+          {CHUNK_OPTIONS.map((m) => {
+            const active = chunk === m;
+            return (
+              <Pressable
+                key={m}
+                onPress={() => setChunk(m)}
+                style={{
+                  paddingVertical: 10,
+                  paddingHorizontal: 14,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: active ? "#111" : "#ddd",
+                  backgroundColor: active ? "#111" : "#fff",
+                }}
+              >
+                <Text
+                  style={{
+                    fontWeight: "700",
+                    color: active ? "#fff" : "#111",
+                  }}
+                >
+                  {m} min
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
       <View style={{ gap: 6 }}>
