@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import * as SQLite from "expo-sqlite";
 import { DB_NAME, LATEST_DB_VERSION, schemaV1, migrateToV2 } from "./schema";
 
@@ -26,6 +27,7 @@ async function setUserVersion(
 }
 
 export async function initDb(): Promise<void> {
+  if (Platform.OS === "web") return;
   const database = await getDb();
 
   // Create base schema (V1) always (idempotent)

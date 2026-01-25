@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { Platform } from "react-native";
 import { Alert, Pressable, Text, View, ScrollView } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -25,6 +26,11 @@ export default function TodayScreen({ navigation }: Props) {
   const [items, setItems] = useState<Activity[]>([]);
 
   const load = useCallback(() => {
+    if (Platform.OS === "web") {
+      setItems([]); // UI preview
+      return;
+    }
+
     getSettings()
       .then((s) => {
         const { startMs, endMs } = dayRangeForNow(s.day_start_minutes);

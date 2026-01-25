@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, Text, TextInput, View } from "react-native";
+import {
+  Platform,
+  Alert,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import type { RootStackParamList } from "../types/navigation";
@@ -35,6 +42,7 @@ export default function AddActivityScreen({ navigation }: Props) {
 
   // ✅ Hook is INSIDE the component
   useEffect(() => {
+    if (Platform.OS === "web") return;
     getSettings()
       .then((s) => {
         setStartTs(Date.now());
@@ -53,6 +61,10 @@ export default function AddActivityScreen({ navigation }: Props) {
   }
 
   async function onSave() {
+    if (Platform.OS === "web") {
+      Alert.alert("Web preview", "Saving is disabled on web.");
+      return;
+    }
     const trimmed = title.trim();
     if (!trimmed) {
       Alert.alert(

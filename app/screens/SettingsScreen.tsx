@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { Alert, Pressable, Text, TextInput, View } from "react-native";
+import { Platform, Alert } from "react-native";
+
+import { Pressable, Text, TextInput, View } from "react-native";
 import { getSettings, updateSettings } from "../db/settings";
 import { minutesToHhMm } from "../lib/time";
 
@@ -8,12 +10,14 @@ function clamp(n: number, min: number, max: number) {
 }
 
 const CHUNK_OPTIONS = [15, 30, 45, 60] as const;
+type ChunkOption = (typeof CHUNK_OPTIONS)[number];
 
 export default function SettingsScreen() {
   const [dayStart, setDayStart] = useState(390); // minutes
   const [chunk, setChunk] = useState(30);
 
   useEffect(() => {
+    if (Platform.OS === "web") return;
     getSettings()
       .then((s) => {
         setDayStart(s.day_start_minutes);
@@ -25,6 +29,10 @@ export default function SettingsScreen() {
   const { hh, mm } = minutesToHhMm(dayStart);
 
   async function onSave() {
+    if (Platform.OS === "web") {
+      Alert.alert("Web preview", "Settings saving is disabled on web.");
+      return;
+    }
     try {
       await updateSettings({
         day_start_minutes: clamp(dayStart, 0, 1439),
@@ -71,22 +79,6 @@ export default function SettingsScreen() {
             );
           })}
         </View>
-      </View>
-
-      <View style={{ gap: 6 }}>
-        <Text style={{ fontWeight: "700" }}>Default chunk (minutes)</Text>
-        <TextInput
-          keyboardType="number-pad"
-          value={String(chunk)}
-          onChangeText={(v) => setChunk(Number(v || 0))}
-          style={{
-            borderWidth: 1,
-            borderColor: "#ddd",
-            borderRadius: 12,
-            padding: 12,
-            fontSize: 16,
-          }}
-        />
       </View>
 
       <Pressable
