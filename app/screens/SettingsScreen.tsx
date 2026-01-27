@@ -1,27 +1,59 @@
 import { useEffect, useState } from "react";
-import { Platform, Alert } from "react-native";
+import { Alert, Pressable, Text, TextInput, View } from "react-native";
 
-import { Pressable, Text, TextInput, View } from "react-native";
 import { getSettings, updateSettings } from "../db/settings";
+import { listKinds, addKind, deactivateKind, type KindRow } from "../db/kinds";
+import { listAreas, addArea, deactivateArea, type AreaRow } from "../db/areas";
 import { minutesToHhMm } from "../lib/time";
+import {
+  Screen,
+  Card,
+  Title,
+  SectionTitle,
+  Muted,
+  Input,
+  Pill,
+  PrimaryButton,
+} from "../ui/components";
+import { theme } from "../ui/theme";
+
+const CHUNK_OPTIONS = [15, 30, 45, 60] as const;
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-const CHUNK_OPTIONS = [15, 30, 45, 60] as const;
-type ChunkOption = (typeof CHUNK_OPTIONS)[number];
-
 export default function SettingsScreen() {
-  const [dayStart, setDayStart] = useState(390); // minutes
-  const [chunk, setChunk] = useState(30);
+  const [dayStart, setDayStart] = useState(390);
+  const [chunk, setChunk] = useState<(typeof CHUNK_OPTIONS)[number]>(30);
+
+  const [kinds, setKinds] = useState<KindRow[]>([]);
+  const [areas, setAreas] = useState<AreaRow[]>([]);
+
+  const [defaultKindId, setDefaultKindId] = useState<string | null>(null);
+  const [defaultAreaId, setDefaultAreaId] = useState<string | null>(null);
+
+  const [newKind, setNewKind] = useState("");
+  const [newArea, setNewArea] = useState("");
+
+  async function refreshLists() {
+    const [ks, ars] = await Promise.all([listKinds(true), listAreas(true)]);
+    setKinds(ks);
+    setAreas(ars);
+  }
 
   useEffect(() => {
-    if (Platform.OS === "web") return;
     getSettings()
-      .then((s) => {
+      .then(async (s) => {
         setDayStart(s.day_start_minutes);
-        setChunk(s.default_chunk_minutes);
+        setChunk(
+          CHUNK_OPTIONS.includes(s.default_chunk_minutes as any)
+            ? (s.default_chunk_minutes as any)
+            : 30,
+        );
+        setDefaultKindId(s.default_kind_id ?? "kind_productive");
+        setDefaultAreaId(s.default_area_id ?? "area_startup");
+        await refreshLists();
       })
       .catch((e) => Alert.alert("Settings load failed", String(e)));
   }, []);
@@ -29,14 +61,12 @@ export default function SettingsScreen() {
   const { hh, mm } = minutesToHhMm(dayStart);
 
   async function onSave() {
-    if (Platform.OS === "web") {
-      Alert.alert("Web preview", "Settings saving is disabled on web.");
-      return;
-    }
     try {
       await updateSettings({
         day_start_minutes: clamp(dayStart, 0, 1439),
-        default_chunk_minutes: clamp(chunk, 1, 240),
+        default_chunk_minutes: chunk,
+        default_kind_id: defaultKindId,
+        default_area_id: defaultAreaId,
       });
       Alert.alert("Saved", "Settings updated.");
     } catch (e) {
@@ -44,65 +74,53 @@ export default function SettingsScreen() {
     }
   }
 
-  return (
-    <View style={{ flex: 1, padding: 16, gap: 14 }}>
-      <Text style={{ fontSize: 28, fontWeight: "700" }}>Settings</Text>
+  async function onAddKind() {
+    try {
+      await addKind(newKind);
+      setNewKind("");
+      await refreshLists();
+    } catch (e) {
+      Alert.alert("Add Kind failed", String(e));
+    }
+  }
 
-      <View style={{ gap: 6 }}>
-        <Text style={{ fontWeight: "700" }}>Default chunk length</Text>
+  async function onAddArea() {
+    try {
+      await addArea(newArea);
+      setNewArea("");
+      await refreshLists();
+    } catch (e) {
+      Alert.alert("Add Area failed", String(e));
+    }
+  }
+
+  return (
+    <Screen>
+      <Title>Settings</Title>
+      <Muted>Make Kairo fit your day.</Muted>
+
+      <View style={{ height: theme.space.lg }} />
+
+      <Card>
+        <SectionTitle>Default chunk length</SectionTitle>
+        <View style={{ height: theme.space.sm }} />
 
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-          {CHUNK_OPTIONS.map((m) => {
-            const active = chunk === m;
-
-            return (
-              <Pressable
-                key={m}
-                onPress={() => setChunk(m)}
-                style={{
-                  paddingVertical: 10,
-                  paddingHorizontal: 18,
-                  borderRadius: 999,
-
-                  // 🟢 GREEN SELECTED STATE
-                  backgroundColor: active ? "#22c55e" : "transparent", // Tailwind green-500
-                  borderWidth: active ? 0 : 1,
-                  borderColor: "#d1d5db", // gray-300
-
-                  shadowColor: "transparent",
-                  elevation: 0,
-                }}
-              >
-                <Text
-                  style={{
-                    fontWeight: "700",
-                    fontSize: 14,
-                    color: active ? "#fff" : "#111",
-                  }}
-                >
-                  {m} min
-                </Text>
-              </Pressable>
-            );
-          })}
+          {CHUNK_OPTIONS.map((m) => (
+            <Pill
+              key={m}
+              label={`${m} min`}
+              active={chunk === m}
+              onPress={() => setChunk(m)}
+              activeColor="#22C55E" // green selected
+            />
+          ))}
         </View>
-      </View>
+      </Card>
 
-      <Pressable
-        onPress={onSave}
-        style={{
-          marginTop: 8,
-          paddingVertical: 14,
-          paddingHorizontal: 16,
-          borderRadius: 12,
-          backgroundColor: "#111",
-          alignItems: "center",
-        }}
-      >
-        <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800" }}>
-          Save
-        </Text>
-      </Pressable>
-    </View>
+      <View style={{ height: theme.space.md }} />
+
+      <PrimaryButton label="Save" onPress={onSave} />
+    </Screen>
   );
 }

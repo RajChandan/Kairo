@@ -1,30 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  Platform,
-  Alert,
-  Pressable,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Alert, Pressable, Text, TextInput, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import type { RootStackParamList } from "../types/navigation";
 import { getSettings } from "../db/settings";
-import { insertActivity, type Area, type Kind } from "../db/activities";
+import { listKinds, type KindRow } from "../db/kinds";
+import { listAreas, type AreaRow } from "../db/areas";
+import { insertActivity } from "../db/activities";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AddActivity">;
-
-const kinds: Kind[] = ["Productive", "Casual", "Other"];
-const areas: Area[] = [
-  "Startup",
-  "Job",
-  "Health",
-  "Learning",
-  "Rest",
-  "Personal",
-  "Admin",
-];
 
 function uuid() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -34,26 +18,35 @@ export default function AddActivityScreen({ navigation }: Props) {
   const now = Date.now();
 
   const [title, setTitle] = useState("");
-  const [kind, setKind] = useState<Kind>("Productive");
-  const [area, setArea] = useState<Area>("Startup");
-  const [startTs, setStartTs] = useState(now);
-  const [endTs, setEndTs] = useState(now + 30 * 60 * 1000);
   const [notes, setNotes] = useState("");
 
-  // ✅ Hook is INSIDE the component
+  const [kinds, setKinds] = useState<KindRow[]>([]);
+  const [areas, setAreas] = useState<AreaRow[]>([]);
+
+  const [kindId, setKindId] = useState<string | null>(null);
+  const [areaId, setAreaId] = useState<string | null>(null);
+
+  const [startTs, setStartTs] = useState(now);
+  const [endTs, setEndTs] = useState(now + 30 * 60 * 1000);
+
   useEffect(() => {
-    if (Platform.OS === "web") return;
-    getSettings()
-      .then((s) => {
+    Promise.all([getSettings(), listKinds(true), listAreas(true)])
+      .then(([s, ks, ars]) => {
+        setKinds(ks);
+        setAreas(ars);
+
+        setKindId(s.default_kind_id ?? ks[0]?.id ?? null);
+        setAreaId(s.default_area_id ?? ars[0]?.id ?? null);
+
         setStartTs(Date.now());
         setEndTs(Date.now() + s.default_chunk_minutes * 60 * 1000);
       })
-      .catch(() => {});
+      .catch((e) => Alert.alert("Load failed", String(e)));
   }, []);
 
   const durationMins = useMemo(
     () => Math.max(0, Math.round((endTs - startTs) / 60000)),
-    [startTs, endTs]
+    [startTs, endTs],
   );
 
   function bumpEnd(minutes: number) {
@@ -61,16 +54,16 @@ export default function AddActivityScreen({ navigation }: Props) {
   }
 
   async function onSave() {
-    if (Platform.OS === "web") {
-      Alert.alert("Web preview", "Saving is disabled on web.");
-      return;
-    }
     const trimmed = title.trim();
     if (!trimmed) {
       Alert.alert(
         "Title required",
-        "Add something like “Deep work” or “Workout”."
+        "Add something like “Deep work” or “Workout”.",
       );
+      return;
+    }
+    if (!kindId || !areaId) {
+      Alert.alert("Select Kind & Area", "Please choose both Kind and Area.");
       return;
     }
     if (endTs <= startTs) {
@@ -78,16 +71,19 @@ export default function AddActivityScreen({ navigation }: Props) {
       return;
     }
 
+    // category legacy: store area name if available (nice for older UI)
+    const areaName = areas.find((a) => a.id === areaId)?.name ?? "General";
+
     await insertActivity({
       id: uuid(),
       title: trimmed,
-      category: area, // backward compatibility field
-      kind,
-      area,
+      category: areaName,
       start_ts: startTs,
       end_ts: endTs,
       notes: notes.trim() ? notes.trim() : null,
       created_ts: Date.now(),
+      kind_id: kindId,
+      area_id: areaId,
     });
 
     navigation.goBack();
@@ -116,26 +112,26 @@ export default function AddActivityScreen({ navigation }: Props) {
 
       <View style={{ gap: 6 }}>
         <Text style={{ fontWeight: "700" }}>Kind</Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           {kinds.map((k) => {
-            const active = k === kind;
+            const active = k.id === kindId;
             return (
               <Pressable
-                key={k}
-                onPress={() => setKind(k)}
+                key={k.id}
+                onPress={() => setKindId(k.id)}
                 style={{
-                  paddingVertical: 8,
-                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  paddingHorizontal: 14,
                   borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: active ? "#111" : "#ddd",
-                  backgroundColor: active ? "#111" : "#fff",
+                  backgroundColor: active ? "#22c55e" : "transparent",
+                  borderWidth: active ? 0 : 1,
+                  borderColor: "#d1d5db",
                 }}
               >
                 <Text
-                  style={{ color: active ? "#fff" : "#111", fontWeight: "700" }}
+                  style={{ fontWeight: "700", color: active ? "#fff" : "#111" }}
                 >
-                  {k}
+                  {k.name}
                 </Text>
               </Pressable>
             );
@@ -145,26 +141,26 @@ export default function AddActivityScreen({ navigation }: Props) {
 
       <View style={{ gap: 6 }}>
         <Text style={{ fontWeight: "700" }}>Area</Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           {areas.map((a) => {
-            const active = a === area;
+            const active = a.id === areaId;
             return (
               <Pressable
-                key={a}
-                onPress={() => setArea(a)}
+                key={a.id}
+                onPress={() => setAreaId(a.id)}
                 style={{
-                  paddingVertical: 8,
-                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  paddingHorizontal: 14,
                   borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: active ? "#111" : "#ddd",
-                  backgroundColor: active ? "#111" : "#fff",
+                  backgroundColor: active ? "#22c55e" : "transparent",
+                  borderWidth: active ? 0 : 1,
+                  borderColor: "#d1d5db",
                 }}
               >
                 <Text
-                  style={{ color: active ? "#fff" : "#111", fontWeight: "700" }}
+                  style={{ fontWeight: "700", color: active ? "#fff" : "#111" }}
                 >
-                  {a}
+                  {a.name}
                 </Text>
               </Pressable>
             );
