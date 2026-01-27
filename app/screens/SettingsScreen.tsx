@@ -54,22 +54,29 @@ export default function SettingsScreen() {
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           {CHUNK_OPTIONS.map((m) => {
             const active = chunk === m;
+
             return (
               <Pressable
                 key={m}
                 onPress={() => setChunk(m)}
                 style={{
                   paddingVertical: 10,
-                  paddingHorizontal: 14,
+                  paddingHorizontal: 18,
                   borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: active ? "#111" : "#ddd",
-                  backgroundColor: active ? "#111" : "#fff",
+
+                  // 🟢 GREEN SELECTED STATE
+                  backgroundColor: active ? "#22c55e" : "transparent", // Tailwind green-500
+                  borderWidth: active ? 0 : 1,
+                  borderColor: "#d1d5db", // gray-300
+
+                  shadowColor: "transparent",
+                  elevation: 0,
                 }}
               >
                 <Text
                   style={{
                     fontWeight: "700",
+                    fontSize: 14,
                     color: active ? "#fff" : "#111",
                   }}
                 >
